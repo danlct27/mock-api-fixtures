@@ -92,26 +92,34 @@ export async function saveFixture(name, data, metadata = {}) {
 /**
  * Load a fixture
  * @param {string} name - Fixture name
- * @returns {Promise<Fixture>} Fixture object
+ * @returns {Promise<Object>} Fixture data
  */
 export async function loadFixture(name) {
   const fixturesDir = await getFixturesDir();
-  const { dataPath, metaPath } = getFixturePaths(name, fixturesDir);
+  const { dataPath } = getFixturePaths(name, fixturesDir);
 
   if (!fs.existsSync(dataPath)) {
     throw new Error(`Fixture not found: ${name}`);
   }
 
-  // Load data
   const data = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+  return data;
+}
 
-  // Load metadata (optional)
-  let metadata = {};
-  if (fs.existsSync(metaPath)) {
-    metadata = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+/**
+ * Load fixture metadata
+ * @param {string} name - Fixture name
+ * @returns {Promise<FixtureMetadata|null>} Metadata or null
+ */
+export async function loadMetadata(name) {
+  const fixturesDir = await getFixturesDir();
+  const { metaPath } = getFixturePaths(name, fixturesDir);
+
+  if (!fs.existsSync(metaPath)) {
+    return null;
   }
 
-  return { name, data, metadata };
+  return JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
 }
 
 /**

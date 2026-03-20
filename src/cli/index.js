@@ -10,6 +10,7 @@ import { initCommand } from './commands/init.js';
 import { captureCommand } from './commands/capture.js';
 import { typesCommand } from './commands/types.js';
 import { listCommand } from './commands/list.js';
+import { diffCommand } from './commands/diff.js';
 
 program
   .name('mock-api-fixtures')
@@ -34,6 +35,7 @@ program
   .option('--auth-token <token>', 'Auth token or API key')
   .option('--jsdoc', 'Generate JSDoc types file (.types.js)')
   .option('--typescript', 'Generate TypeScript types file (.d.ts)')
+  .option('--msw', 'Generate MSW handler file (.msw.js)')
   .action(captureCommand);
 
 program
@@ -48,5 +50,13 @@ program
   .description('List all fixtures with metadata')
   .option('-j, --json', 'Output as JSON')
   .action(listCommand);
+
+program
+  .command('diff')
+  .description('Compare fixtures against live API to detect drift')
+  .option('-e, --env <environment>', 'Environment name for URL resolution')
+  .option('--config <path>', 'Config file path')
+  .option('--fail-on-drift', 'Exit with error code if drift detected')
+  .action(diffCommand);
 
 program.parse();

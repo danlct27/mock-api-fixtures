@@ -9,6 +9,7 @@ import { loadConfig } from '../../core/config.js';
 import { fetchWithAuth } from '../../core/http-client.js';
 import { saveFixture, getFixturesDir } from '../../core/fixture-store.js';
 import { generateJSDoc, generateTypeScript } from '../../core/generator.js';
+import { generateMSW } from '../../formatters/msw.js';
 
 /**
  * @typedef {Object} CaptureOptions
@@ -96,6 +97,19 @@ export async function captureCommand(url, options = {}) {
         fs.writeFileSync(typePath, jsdocContent);
         console.log(`✓ Generated JSDoc types: ${typePath}`);
       }
+    }
+
+    // Generate MSW handler if requested
+    if (options.msw) {
+      const fixturesDir = await getFixturesDir();
+      const mswContent = generateMSW({
+        name: fixtureName,
+        url: url,
+        method: options.method || 'GET'
+      });
+      const mswPath = path.join(fixturesDir, `${fixtureName}.msw.js`);
+      fs.writeFileSync(mswPath, mswContent);
+      console.log(`✓ Generated MSW handler: ${mswPath}`);
     }
 
   } catch (error) {
