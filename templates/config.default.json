@@ -1,0 +1,12 @@
+{
+  "fixturesDir": "./fixtures",
+  "typesOutput": "./fixtures",
+  "typesFormat": "jsdoc",
+  "environments": {},
+  "auth": null,
+  "defaultHeaders": {
+    "Content-Type": "application/json"
+  },
+  "maxSizeBytes": 5242880,
+  "arraySampleSize": 100
+}
