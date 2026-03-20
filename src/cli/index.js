@@ -11,6 +11,9 @@ import { captureCommand } from './commands/capture.js';
 import { typesCommand } from './commands/types.js';
 import { listCommand } from './commands/list.js';
 import { diffCommand } from './commands/diff.js';
+import { syncCommand } from './commands/sync.js';
+import { importCommand } from './commands/import.js';
+import { mockCommand, mockAllCommand } from './commands/mock.js';
 
 program
   .name('mock-api-fixtures')
@@ -58,5 +61,47 @@ program
   .option('--config <path>', 'Config file path')
   .option('--fail-on-drift', 'Exit with error code if drift detected')
   .action(diffCommand);
+
+program
+  .command('sync')
+  .description('Re-capture all fixtures from their original URLs')
+  .option('-e, --env <environment>', 'Environment name for URL resolution')
+  .option('--config <path>', 'Config file path')
+  .option('--dry-run', 'Show what would be synced without making changes')
+  .option('--force', 'Force re-capture even if unchanged')
+  .action(syncCommand);
+
+program
+  .command('import <spec>')
+  .description('Import fixtures from OpenAPI specification')
+  .option('-e, --env <environment>', 'Environment name for URL resolution')
+  .option('--config <path>', 'Config file path')
+  .option('--jsdoc', 'Generate JSDoc types for imported fixtures')
+  .option('--typescript', 'Generate TypeScript types for imported fixtures')
+  .option('--msw', 'Generate MSW handlers for imported fixtures')
+  .option('--mock', 'Generate mock data from schema')
+  .action(importCommand);
+
+program
+  .command('mock <name>')
+  .description('Generate mock data variants from existing fixture')
+  .option('-c, --count <number>', 'Number of variants to generate', '3')
+  .option('-o, --output <prefix>', 'Output name prefix')
+  .option('--all', 'Generate mocks for all fixtures')
+  .option('--jsdoc', 'Generate JSDoc types for mock variants')
+  .option('--typescript', 'Generate TypeScript types for mock variants')
+  .option('--msw', 'Generate MSW handlers for mock variants')
+  .option('--vary <fields...>', 'Fields to vary (comma-separated)')
+  .action(mockCommand);
+
+// Alias for mock --all
+program
+  .command('mock:all')
+  .description('Generate mock variants for all fixtures')
+  .option('-c, --count <number>', 'Number of variants per fixture', '3')
+  .option('--jsdoc', 'Generate JSDoc types')
+  .option('--typescript', 'Generate TypeScript types')
+  .option('--msw', 'Generate MSW handlers')
+  .action(mockAllCommand);
 
 program.parse();
