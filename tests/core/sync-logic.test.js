@@ -17,7 +17,7 @@ describe('Sync Module Core Logic', () => {
       fs.mkdirSync(TEST_DIR, { recursive: true });
     }
     // Create default config
-    fs.writeFileSync(path.join(TEST_DIR, 'mock-api-fixtures.config.json'), JSON.stringify({
+    fs.writeFileSync(path.join(TEST_DIR, 'apitape.config.json'), JSON.stringify({
       fixturesDir: path.join(TEST_DIR, 'fixtures')
     }));
     // Create fixtures directory

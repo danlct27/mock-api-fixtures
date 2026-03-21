@@ -123,23 +123,39 @@ export async function loadMetadata(name) {
 }
 
 /**
- * Delete a fixture
+ * Delete a fixture and all associated files
  * @param {string} name - Fixture name
  * @returns {Promise<boolean>} True if deleted
  */
 export async function deleteFixture(name) {
   const fixturesDir = await getFixturesDir();
   const { dataPath, metaPath } = getFixturePaths(name, fixturesDir);
+  const baseName = sanitizeName(name);
 
   let deleted = false;
 
+  // Remove data file
   if (fs.existsSync(dataPath)) {
     fs.unlinkSync(dataPath);
     deleted = true;
   }
 
+  // Remove metadata
   if (fs.existsSync(metaPath)) {
     fs.unlinkSync(metaPath);
+  }
+
+  // Remove associated generated files
+  const associatedFiles = [
+    path.join(fixturesDir, `${baseName}.d.ts`),
+    path.join(fixturesDir, `${baseName}.types.js`),
+    path.join(fixturesDir, `${baseName}.msw.js`)
+  ];
+
+  for (const filePath of associatedFiles) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   }
 
   return deleted;
@@ -157,31 +173,23 @@ export async function listFixtures() {
   }
 
   const files = fs.readdirSync(fixturesDir);
-  const fixtureNames = new Set();
-
-  // Find all fixture names
-  for (const file of files) {
-    if (file.endsWith('.json') && !file.endsWith('.meta.json')) {
-      fixtureNames.add(file.replace('.json', ''));
-    }
-  }
-
-  // Load metadata for each fixture
   const fixtures = [];
 
-  for (const name of fixtureNames) {
-    const { metaPath } = getFixturePaths(name, fixturesDir);
+  // Only consider .json files that have a matching .meta.json
+  for (const file of files) {
+    if (!file.endsWith('.json') || file.endsWith('.meta.json')) continue;
 
-    if (fs.existsSync(metaPath)) {
-      try {
-        const metadata = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-        fixtures.push(metadata);
-      } catch {
-        // If metadata is invalid, add basic info
-        fixtures.push({ name, capturedAt: null, url: null });
-      }
-    } else {
-      fixtures.push({ name, capturedAt: null, url: null });
+    const baseName = file.replace('.json', '');
+    const metaFile = `${baseName}.meta.json`;
+
+    if (!files.includes(metaFile)) continue;
+
+    const metaPath = path.join(fixturesDir, metaFile);
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      fixtures.push(metadata);
+    } catch {
+      fixtures.push({ name: baseName, capturedAt: null, url: null });
     }
   }
 

@@ -5,9 +5,10 @@
 
 import { loadConfig } from '../../core/config.js';
 import { fetchWithAuth } from '../../core/http-client.js';
-import { listFixtures, loadMetadata, saveFixture } from '../../core/fixture-store.js';
+import { listFixtures, loadFixture, loadMetadata, saveFixture, getFixturesDir } from '../../core/fixture-store.js';
 import { generateJSDoc, generateTypeScript } from '../../core/generator.js';
 import { generateMSW } from '../../formatters/msw.js';
+import { toPascalCase } from '../utils.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -30,7 +31,7 @@ export async function syncCommand(options = {}) {
     const fixtures = await listFixtures();
 
     if (fixtures.length === 0) {
-      console.log('No fixtures found. Run `mock-api-fixtures capture` first.');
+      console.log('No fixtures found. Run `apitape capture` first.');
       return 0;
     }
 
@@ -162,7 +163,6 @@ export async function syncCommand(options = {}) {
  * @returns {Promise<Object>} Fixture data
  */
 async function loadFixtureData(name) {
-  const { getFixturesDir } = await import('../../core/fixture-store.js');
   const fixturesDir = await getFixturesDir();
   const dataPath = path.join(fixturesDir, `${name}.json`);
   
@@ -171,16 +171,4 @@ async function loadFixtureData(name) {
   }
   
   return JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
-}
-
-/**
- * Convert string to PascalCase
- * @param {string} str - Input string
- * @returns {string} PascalCase string
- */
-function toPascalCase(str) {
-  return str
-    .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('');
 }

@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 export async function initCommand(options = {}) {
   const cwd = process.cwd();
   const fixturesDir = path.join(cwd, 'fixtures');
-  const configFile = path.join(cwd, 'mock-api-fixtures.config.json');
+  const configFile = path.join(cwd, 'apitape.config.json');
   const gitignoreFile = path.join(cwd, '.gitignore');
 
   // Get template path (from src/cli/commands/ -> root templates/)
@@ -33,18 +33,18 @@ export async function initCommand(options = {}) {
   // Create fixtures directory
   if (!fs.existsSync(fixturesDir)) {
     fs.mkdirSync(fixturesDir, { recursive: true });
-    console.log('✓Created fixtures/ directory');
+    console.log('✓ Created fixtures/ directory');
   } else {
     console.log('  fixtures/ directory already exists');
   }
 
   // Create config file
   if (fs.existsSync(configFile) && !options.force) {
-    console.log('  mock-api-fixtures.config.json already exists (use --force to overwrite)');
+    console.log('  apitape.config.json already exists (use --force to overwrite)');
   } else {
     const configTemplate = fs.readFileSync(templatePath, 'utf-8');
     fs.writeFileSync(configFile, configTemplate);
-    console.log('✓ Created mock-api-fixtures.config.json');
+    console.log('✓ Created apitape.config.json');
   }
 
   // Update .gitignore
@@ -67,6 +67,6 @@ export async function initCommand(options = {}) {
 
   console.log('\n🎉 Initialization complete!');
   console.log('\nNext steps:');
-  console.log('  1. Edit mock-api-fixtures.config.json to configure your API');
-  console.log('  2. Run `mock-api-fixtures capture <url> --name <name>` to capture fixtures');
+  console.log('  1. Edit apitape.config.json to configure your API');
+  console.log('  2. Run `apitape capture <url> --name <name>` to capture fixtures');
 }

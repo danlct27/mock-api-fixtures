@@ -18,7 +18,7 @@ import path from 'path';
  * @property {number} arraySampleSize - Array sample size for type inference
  */
 
-const CONFIG_FILE = 'mock-api-fixtures.config.json';
+const CONFIG_FILE = 'apitape.config.json';
 
 /**
  * Load configuration from file

@@ -5,69 +5,63 @@
 
 import fs from 'fs';
 import path from 'path';
-import { loadConfig } from '../../core/config.js';
+import { loadConfig, resolveEnv } from '../../core/config.js';
 import { fetchWithAuth } from '../../core/http-client.js';
 import { saveFixture, getFixturesDir } from '../../core/fixture-store.js';
 import { generateJSDoc, generateTypeScript } from '../../core/generator.js';
 import { generateMSW } from '../../formatters/msw.js';
-
-/**
- * @typedef {Object} CaptureOptions
- * @property {string} name- Fixture name
- * @property {string} env - Environment name
- * @property {string} method - HTTP method
- * @property {string[]} header - Request headers
- * @property {string} auth - Auth type
- * @property {string} authToken - Auth token
- * @property {boolean} jsdoc - Generate JSDoc types file
- * @property {boolean} typescript - Generate TypeScript types file
- */
+import { toPascalCase } from '../utils.js';
 
 /**
  * Capture an API response as a fixture
  * @param {string} url - URL to capture
- * @param {CaptureOptions} options - Command options
+ * @param {Object} options - Command options
  * @returns {Promise<void>}
  */
 export async function captureCommand(url, options = {}) {
-  console.log(`Capturing: ${url}`);
-
   try {
-    // Load config
     const config = await loadConfig();
+
+    // Resolve URL with environment
+    const resolvedUrl = resolveEnv(url, options.env, config);
+    console.log(`Capturing: ${resolvedUrl}`);
 
     // Parse headers
     const headers = {};
     if (options.header) {
       for (const h of options.header) {
         const [key, value] = h.split(':').map(s => s.trim());
-        if (key && value) {
-          headers[key] = value;
-        }
+        if (key && value) headers[key] = value;
       }
     }
-
-    // Merge with default headers
     const mergedHeaders = { ...config.defaultHeaders, ...headers };
 
-    // Build auth options
-    const authOptions = {};
-    if (options.auth && options.authToken) {
-      authOptions.type = options.auth;
-      authOptions.token = options.authToken;
-    }
+    // Build auth: CLI flags override config
+    const authOptions = buildAuth(options, config);
 
     // Fetch the API
-    const response = await fetchWithAuth(url, {
+    const response = await fetchWithAuth(resolvedUrl, {
       method: options.method || 'GET',
       headers: mergedHeaders,
       auth: authOptions
     });
 
+    // Reject non-2xx unless --allow-error is set
+    if (response.status >= 400 && !options.allowError) {
+      console.error(`✗ HTTP ${response.status} — use --allow-error to capture error responses`);
+      process.exit(1);
+    }
+
+    // Validate fixture name
+    if (!options.name) {
+      console.error('✗ Missing required option: --name <name>');
+      process.exit(1);
+    }
+
     // Save fixture
-    const fixtureName = options.name || generateFixtureName(url);
+    const fixtureName = options.name;
     const metadata = {
-      url,
+      url: resolvedUrl,
       method: options.method || 'GET',
       capturedAt: new Date().toISOString(),
       headers: mergedHeaders,
@@ -75,8 +69,7 @@ export async function captureCommand(url, options = {}) {
     };
 
     await saveFixture(fixtureName, response.data, metadata);
-
-    console.log(`✓ Saved fixture: ${fixtureName}`);
+    console.log(`✓ Saved fixture: ${fixtureName} (HTTP ${response.status})`);
 
     // Generate types if requested
     if (options.jsdoc || options.typescript) {
@@ -104,7 +97,7 @@ export async function captureCommand(url, options = {}) {
       const fixturesDir = await getFixturesDir();
       const mswContent = generateMSW({
         name: fixtureName,
-        url: url,
+        url: resolvedUrl,
         method: options.method || 'GET'
       });
       const mswPath = path.join(fixturesDir, `${fixtureName}.msw.js`);
@@ -119,29 +112,21 @@ export async function captureCommand(url, options = {}) {
 }
 
 /**
- * Convert string to PascalCase
- * @param {string} str - Input string
- * @returns {string} PascalCase string
+ * Build auth options — CLI flags take priority, then config
+ * @param {Object} options - CLI options
+ * @param {Object} config - Loaded config
+ * @returns {Object} Auth options for fetchWithAuth
  */
-function toPascalCase(str) {
-  return str
-    .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('');
+function buildAuth(options, config) {
+  // CLI flags first
+  if (options.auth && options.authToken) {
+    return { type: options.auth, token: options.authToken };
+  }
+  // Fall back to config
+  if (config.auth && config.auth.type && config.auth.token) {
+    return { type: config.auth.type, token: config.auth.token };
+  }
+  return {};
 }
 
-/**
- * Generate a fixture name from URL
- * @param {string} url - URL
- * @returns {string} Fixture name
- */
-function generateFixtureName(url) {
-  try {
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    const name = pathParts.length > 0? pathParts.join('-'): 'root';
-    return `${name}-${Date.now()}`;
-  } catch {
-    return `fixture-${Date.now()}`;
-  }
-}
+

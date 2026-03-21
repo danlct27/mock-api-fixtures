@@ -10,6 +10,7 @@ import { listFixtures, loadFixture, loadMetadata, saveFixture, getFixturesDir } 
 import { generateVariants } from '../../core/mock-generator.js';
 import { generateJSDoc, generateTypeScript } from '../../core/generator.js';
 import { generateMSW } from '../../formatters/msw.js';
+import { toPascalCase } from '../utils.js';
 
 /**
  * Generate mock data from existing fixture
@@ -113,7 +114,7 @@ export async function mockAllCommand(options = {}) {
     const fixtures = await listFixtures();
     
     if (fixtures.length === 0) {
-      console.log('No fixtures found. Run `mock-api-fixtures capture` first.');
+      console.log('No fixtures found. Run `apitape capture` first.');
       return 0;
     }
 
@@ -138,16 +139,4 @@ export async function mockAllCommand(options = {}) {
     console.error(`Error: ${error.message}`);
     return 1;
   }
-}
-
-/**
- * Convert string to PascalCase
- * @param {string} str - Input string
- * @returns {string} PascalCase string
- */
-function toPascalCase(str) {
-  return str
-    .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('');
 }

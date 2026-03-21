@@ -6,6 +6,7 @@
 import { loadConfig } from '../../core/config.js';
 import { listFixtures, loadFixture } from '../../core/fixture-store.js';
 import { generateJSDoc, generateTypeScript } from '../../core/generator.js';
+import { toPascalCase } from '../utils.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -40,7 +41,7 @@ export async function typesCommand(options = {}) {
     const typeContents = [];
 
     for (const fixture of fixtures) {
-      const { data } = await loadFixture(fixture.name);
+      const data = await loadFixture(fixture.name);
       const typeName = toPascalCase(fixture.name);
 
       if (format === 'typescript') {
@@ -56,7 +57,8 @@ export async function typesCommand(options = {}) {
 
     // Ensure output directory exists
     if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });}
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
 
     fs.writeFileSync(outputPath, typeContents.join('\n\n'));
     console.log(`✓ Generated types: ${outputPath}`);
@@ -66,16 +68,4 @@ export async function typesCommand(options = {}) {
     console.error(`✗ Error: ${error.message}`);
     process.exit(1);
   }
-}
-
-/**
- * Convert string to PascalCase
- * @param {string} str - Input string
- * @returns {string} PascalCase string
- */
-function toPascalCase(str) {
-  return str
-    .split(/[-_\s]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('');
 }

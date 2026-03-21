@@ -1,19 +1,23 @@
-# Mock API Fixtures
+# apitape
 
-Capture real API responses as test fixtures with auto-generated types (JSDoc or TypeScript).
+Record real API responses as test fixtures with auto-generated types and MSW handlers — then detect drift before your tests break.
 
 ## Features
 
-- 🎯 Capture real API responses as JSON fixtures
-- 📝 Auto-generate type definitions (JSDoc or TypeScript)
-- 🔐 Support for Bearer and API Key authentication
+- 🎯 Capture real API responses as JSON fixtures (including error responses)
+- 📝 Auto-generate deep, recursive type definitions (JSDoc or TypeScript)
+- 🔍 Detect API drift with `diff` — catch breaking changes before your tests do
+- 🔄 Re-sync all fixtures from live APIs with one command
+- 🧪 Generate MSW handlers automatically for browser/node mocking
+- 📦 Import fixtures from OpenAPI specs
+- 🎲 Generate mock data variants from existing fixtures
+- 🔐 Support for Bearer and API Key authentication (CLI flags or config)
 - 📁 Simple fixture storage with metadata
-- ⚡ Native fetch API (Node.js 24+)
 
 ## Installation
 
 ```bash
-npm install mock-api-fixtures
+npm install apitape
 ```
 
 ## Quick Start
@@ -21,37 +25,69 @@ npm install mock-api-fixtures
 ### 1. Initialize
 
 ```bash
-npx mock-api-fixtures init
+npx apitape init
 ```
 
 This creates:
 - `fixtures/` directory
-- `mock-api-fixtures.config.json` configuration file
+- `apitape.config.json` configuration file
 - Updates `.gitignore` (optional)
 
 ### 2. Capture API Responses
 
 ```bash
-npx mock-api-fixtures capture https://api.example.com/users --name users
+npx apitape capture https://api.example.com/users --name users
 ```
 
 ### 3. Generate Types
 
 ```bash
-npx mock-api-fixtures types --format jsdoc
+npx apitape types --format typescript
 # or
-npx mock-api-fixtures types --format typescript
+npx apitape types --format jsdoc
 ```
 
-### 4. List Fixtures
+Nested objects are generated as named interfaces:
+
+```typescript
+export interface UsersAddress {
+  street: string;
+  city: string;
+}
+
+export interface Users {
+  id: number;
+  name: string;
+  address: UsersAddress;
+}
+```
+
+### 4. Detect API Drift
 
 ```bash
-npx mock-api-fixtures list
+npx apitape diff
+npx apitape diff --fail-on-drift  # CI-friendly: exits 1 on drift
+npx apitape diff --json           # Machine-readable output
+```
+
+### 5. Re-sync Fixtures
+
+```bash
+npx apitape sync
+npx apitape sync --dry-run  # Preview changes
+```
+
+### 6. List & Delete Fixtures
+
+```bash
+npx apitape list
+npx apitape list --json
+npx apitape delete users    # Removes fixture + types + MSW handler
 ```
 
 ## Configuration
 
-Edit `mock-api-fixtures.config.json`:
+Edit `apitape.config.json`:
 
 ```json
 {
@@ -66,7 +102,10 @@ Edit `mock-api-fixtures.config.json`:
       "baseUrl": "https://api.example.com"
     }
   },
-  "auth": null,
+  "auth": {
+    "type": "bearer",
+    "token": "your-default-token"
+  },
   "defaultHeaders": {
     "Content-Type": "application/json"
   },
@@ -75,6 +114,8 @@ Edit `mock-api-fixtures.config.json`:
 }
 ```
 
+Auth in config is used automatically by `capture`. CLI flags (`--auth`, `--auth-token`) override config when provided.
+
 ## CLI Commands
 
 ### `init`
@@ -82,9 +123,9 @@ Edit `mock-api-fixtures.config.json`:
 Initialize fixtures directory and config.
 
 ```bash
-mock-api-fixtures init
-mock-api-fixtures init --force        # Overwrite existing config
-mock-api-fixtures init --no-gitignore # Skip .gitignore update
+apitape init
+apitape init --force        # Overwrite existing config
+apitape init --no-gitignore # Skip .gitignore update
 ```
 
 ### `capture <url>`
@@ -92,13 +133,27 @@ mock-api-fixtures init --no-gitignore # Skip .gitignore update
 Capture an API response as a fixture.
 
 ```bash
-mock-api-fixtures capture https://api.example.com/users --name users
-mock-api-fixtures capture /users --env staging --name users
-mock-api-fixtures capture https://api.example.com/users \
+# Basic capture
+apitape capture https://api.example.com/users --name users
+
+# With environment resolution
+apitape capture /users --env staging --name users
+
+# With auth (overrides config)
+apitape capture https://api.example.com/users \
   --name users \
   --auth bearer \
-  --auth-token "your-token" \
-  --generate-types
+  --auth-token "your-token"
+
+# Capture error responses (404, 500, etc.)
+apitape capture https://api.example.com/missing \
+  --name not-found \
+  --allow-error
+
+# Generate types + MSW handler on capture
+apitape capture https://api.example.com/users \
+  --name users \
+  --typescript --msw
 ```
 
 Options:
@@ -108,72 +163,142 @@ Options:
 - `-H, --header <headers...>` - Request headers
 - `--auth <type>` - Auth type: bearer, api-key
 - `--auth-token <token>` - Auth token or API key
-- `--generate-types` - Generate types after capture
-- `--typescript` - Generate TypeScript types (default: JSDoc)
+- `--jsdoc` - Generate JSDoc types file
+- `--typescript` - Generate TypeScript types file
+- `--msw` - Generate MSW handler file
+- `--allow-error` - Capture non-2xx responses
 
 ### `types`
 
 Generate types from all fixtures.
 
 ```bash
-mock-api-fixtures types
-mock-api-fixtures types --format typescript
-mock-api-fixtures types --output ./src/types
+apitape types
+apitape types --format typescript
+apitape types --output ./src/types
 ```
-
-Options:
-- `-f, --format <format>` - Output format: jsdoc, typescript (default: jsdoc)
-- `-o, --output <dir>` - Output directory
 
 ### `list`
 
 List all fixtures with metadata.
 
 ```bash
-mock-api-fixtures list
-mock-api-fixtures list --json
+apitape list
+apitape list --json
+```
+
+### `delete <name>`
+
+Delete a fixture and all associated generated files (.json, .meta.json, .d.ts, .types.js, .msw.js).
+
+```bash
+apitape delete users
+```
+
+### `diff`
+
+Compare fixtures against live API to detect drift.
+
+```bash
+apitape diff
+apitape diff --env staging
+apitape diff --fail-on-drift  # Exit code 1 on drift (CI-friendly)
+apitape diff --json           # Machine-readable JSON output
+```
+
+### `sync`
+
+Re-capture all fixtures from their original URLs.
+
+```bash
+apitape sync
+apitape sync --dry-run
+apitape sync --force
+apitape sync --env staging
+```
+
+### `import <spec>`
+
+Import fixtures from an OpenAPI specification (JSON format).
+
+```bash
+apitape import ./openapi.json
+apitape import ./openapi.json --mock --typescript --msw
+```
+
+### `mock <name>`
+
+Generate mock data variants from existing fixture.
+
+```bash
+apitape mock users --count 5
+apitape mock users --count 3 --vary name email
+apitape mock users --count 3 --typescript --msw
+```
+
+## CI Integration
+
+Use `diff --fail-on-drift` in your CI pipeline to catch API changes:
+
+```yaml
+# GitHub Actions example
+- name: Check fixture drift
+  run: npx apitape diff --fail-on-drift --json
 ```
 
 ## Programmatic Usage
 
+All core functions are exported for library usage:
+
 ```javascript
 import {
-  loadConfig,
+  // Config
+  loadConfig, resolveEnv,
+  // HTTP
   fetchWithAuth,
-  saveFixture,
-  loadFixture,
-  listFixtures,
-  generateJSDoc,
-  generateTypeScript
-} from 'mock-api-fixtures';
+  // Fixtures
+  saveFixture, loadFixture, loadMetadata,
+  listFixtures, deleteFixture, fixtureExists,
+  // Type generation
+  generateJSDoc, generateTypeScript, generateType, inferType,
+  // Diff
+  diffObjects, formatDiffResult,
+  // Mock generation
+  generateMockData, generateVariants,
+  // MSW
+  generateMSW, generateMSWHandlers
+} from 'apitape';
+```
 
-// Load config
-const config = await loadConfig();
+### Example
 
-// Fetch with auth
+```javascript
+// Capture and type-generate programmatically
 const response = await fetchWithAuth('https://api.example.com/users', {
   auth: { type: 'bearer', token: 'your-token' }
 });
 
-// Save fixture
-await saveFixture('users', response.data, { url: 'https://api.example.com/users' });
+await saveFixture('users', response.data, {
+  url: 'https://api.example.com/users',
+  method: 'GET'
+});
 
-// Load fixture
+// Generate deep recursive TypeScript interfaces
+const ts = generateTypeScript(response.data, 'Users');
+
+// Detect drift
 const fixture = await loadFixture('users');
-console.log(fixture.data);
+const liveResponse = await fetchWithAuth('https://api.example.com/users');
+const diff = diffObjects(fixture, liveResponse.data);
 
-// List fixtures
-const fixtures = await listFixtures();
-
-// Generate types
-const jsdoc = generateJSDoc(fixture.data, 'Users');
-const ts = generateTypeScript(fixture.data, 'Users');
+if (diff.status === 'breaking') {
+  console.error(formatDiffResult(diff));
+}
 ```
 
 ## Requirements
 
-- Node.js 24.0.0 or higher
-- Native fetch API support
+- Node.js 18.0.0 or higher
 
 ## License
 

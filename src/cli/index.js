@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview CLI entry point for mock-api-fixtures
+ * @fileoverview CLI entry point for apitape
  * @module cli/index
  */
 
+import { createRequire } from 'node:module';
 import { program } from 'commander';
 import { initCommand } from './commands/init.js';
 import { captureCommand } from './commands/capture.js';
@@ -14,11 +15,15 @@ import { diffCommand } from './commands/diff.js';
 import { syncCommand } from './commands/sync.js';
 import { importCommand } from './commands/import.js';
 import { mockCommand, mockAllCommand } from './commands/mock.js';
+import { deleteCommand } from './commands/delete.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../../package.json');
 
 program
-  .name('mock-api-fixtures')
-  .description('Capture real API responses as test fixtures with auto-generated types')
-  .version('0.1.0');
+  .name('apitape')
+  .description('Record real API responses as test fixtures. Auto-generate types, MSW handlers, and detect API drift.')
+  .version(version);
 
 program
   .command('init')
@@ -30,7 +35,7 @@ program
 program
   .command('capture <url>')
   .description('Capture an API response as a fixture')
-  .option('-n, --name <name>', 'Fixture name (required)')
+  .requiredOption('-n, --name <name>', 'Fixture name')
   .option('-e, --env <environment>', 'Environment name for URL resolution')
   .option('-m, --method <method>', 'HTTP method (default: GET)')
   .option('-H, --header <headers...>', 'Request headers')
@@ -39,6 +44,7 @@ program
   .option('--jsdoc', 'Generate JSDoc types file (.types.js)')
   .option('--typescript', 'Generate TypeScript types file (.d.ts)')
   .option('--msw', 'Generate MSW handler file (.msw.js)')
+  .option('--allow-error', 'Capture non-2xx responses (e.g. 404, 500)')
   .action(captureCommand);
 
 program
@@ -60,7 +66,11 @@ program
   .option('-e, --env <environment>', 'Environment name for URL resolution')
   .option('--config <path>', 'Config file path')
   .option('--fail-on-drift', 'Exit with error code if drift detected')
-  .action(diffCommand);
+  .option('-j, --json', 'Output as JSON')
+  .action(async (...args) => {
+    const code = await diffCommand(...args);
+    if (code) process.exit(code);
+  });
 
 program
   .command('sync')
@@ -69,7 +79,10 @@ program
   .option('--config <path>', 'Config file path')
   .option('--dry-run', 'Show what would be synced without making changes')
   .option('--force', 'Force re-capture even if unchanged')
-  .action(syncCommand);
+  .action(async (...args) => {
+    const code = await syncCommand(...args);
+    if (code) process.exit(code);
+  });
 
 program
   .command('import <spec>')
@@ -80,7 +93,10 @@ program
   .option('--typescript', 'Generate TypeScript types for imported fixtures')
   .option('--msw', 'Generate MSW handlers for imported fixtures')
   .option('--mock', 'Generate mock data from schema')
-  .action(importCommand);
+  .action(async (...args) => {
+    const code = await importCommand(...args);
+    if (code) process.exit(code);
+  });
 
 program
   .command('mock <name>')
@@ -93,6 +109,11 @@ program
   .option('--msw', 'Generate MSW handlers for mock variants')
   .option('--vary <fields...>', 'Fields to vary (comma-separated)')
   .action(mockCommand);
+
+program
+  .command('delete <name>')
+  .description('Delete a fixture and its associated files')
+  .action(deleteCommand);
 
 // Alias for mock --all
 program

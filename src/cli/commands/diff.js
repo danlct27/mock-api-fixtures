@@ -17,16 +17,18 @@ import { diffObjects, formatDiffResult } from '../../core/differ.js';
  * @returns {Promise<number>} Exit code
  */
 export async function diffCommand(options = {}) {
-  const { env,failOnDrift = false } = options;
+  const { env, failOnDrift = false, json = false } = options;
 
-  console.log(`Comparing fixtures against ${env || 'default'} environment...\n`);
+  if (!json) {
+    console.log(`Comparing fixtures against ${env || 'default'} environment...\n`);
+  }
 
   try {
     const config = await loadConfig(options.config);
     const fixtures = await listFixtures();
 
     if (fixtures.length === 0) {
-      console.log('No fixtures found. Run `mock-api-fixtures capture` first.');
+      console.log('No fixtures found. Run `apitape capture` first.');
       return 0;
     }
 
@@ -34,7 +36,8 @@ export async function diffCommand(options = {}) {
     let hasDrift = false;
     let hasBreaking = false;
 
-    for (const name of fixtures) {
+    for (const fixture of fixtures) {
+      const name = fixture.name;
       const metadata = await loadMetadata(name);
       if (!metadata || !metadata.url) {
         console.log(`  ? ${name} - No metadata found, skipping`);
@@ -106,11 +109,15 @@ export async function diffCommand(options = {}) {
     const breaking = results.filter(r => r.status === 'breaking').length;
     const errors = results.filter(r => r.status === 'error').length;
 
-    console.log('Summary:');
-    console.log(`  Fresh: ${fresh}`);
-    console.log(`  Drifted: ${drifted}`);
-    console.log(`  Breaking: ${breaking}`);
-    console.log(`  Errors: ${errors}`);
+    if (json) {
+      console.log(JSON.stringify({ results, summary: { fresh, drifted, breaking, errors } }, null, 2));
+    } else {
+      console.log('Summary:');
+      console.log(`  Fresh: ${fresh}`);
+      console.log(`  Drifted: ${drifted}`);
+      console.log(`  Breaking: ${breaking}`);
+      console.log(`  Errors: ${errors}`);
+    }
 
     if (failOnDrift && hasDrift) {
       console.log('\nDrift detected! Fixtures are out of sync with API.');

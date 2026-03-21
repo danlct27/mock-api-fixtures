@@ -2,7 +2,7 @@
  * @fileoverview Tests for MSW formatter
  */
 
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { generateMSW, generateMSWHandlers } from '../../src/formatters/msw.js';
 
@@ -14,7 +14,7 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/users/1',
         method: 'GET'
       });
-      
+
       assert.ok(result.includes("import { http, HttpResponse } from 'msw'"));
       assert.ok(result.includes('http.get'));
       assert.ok(result.includes("'/users/1'"));
@@ -27,7 +27,7 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/users',
         method: 'POST'
       });
-      
+
       assert.ok(result.includes('http.post'));
       assert.ok(result.includes("'/users'"));
     });
@@ -38,7 +38,7 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/users/1',
         method: 'PUT'
       });
-      
+
       assert.ok(result.includes('http.put'));
     });
 
@@ -48,7 +48,7 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/users/1',
         method: 'DELETE'
       });
-      
+
       assert.ok(result.includes('http.delete'));
     });
 
@@ -58,7 +58,7 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/users/1',
         method: 'PATCH'
       });
-      
+
       assert.ok(result.includes('http.patch'));
     });
 
@@ -68,7 +68,7 @@ describe('MSW Formatter', () => {
         url: '/users/1',
         method: 'GET'
       });
-      
+
       assert.ok(result.includes("'/users/1'"));
     });
 
@@ -78,18 +78,20 @@ describe('MSW Formatter', () => {
         url: 'https://api.example.com/search?q=test',
         method: 'GET'
       });
-      
+
       assert.ok(result.includes("'/search'"));
     });
 
-    it('should include fixture import', () => {
+    it('should load fixture via createRequire', () => {
       const result = generateMSW({
         name: 'user',
         url: '/users/1',
         method: 'GET'
       });
-      
-      assert.ok(result.includes("import userFixture from './user.json'"));
+
+      assert.ok(result.includes("createRequire"));
+      assert.ok(result.includes("require('./" + "user.json')"));
+      assert.ok(result.includes('userFixture'));
     });
 
     it('should export handler with correct name', () => {
@@ -98,7 +100,7 @@ describe('MSW Formatter', () => {
         url: '/users/1',
         method: 'GET'
       });
-      
+
       assert.ok(result.includes('export const userHandler'));
       assert.ok(result.includes('export default userHandler'));
     });
@@ -109,7 +111,7 @@ describe('MSW Formatter', () => {
         url: '/users/1',
         method: 'GET'
       });
-      
+
       assert.ok(result.includes('return HttpResponse.json(userFixture)'));
     });
   });
@@ -120,10 +122,10 @@ describe('MSW Formatter', () => {
         { name: 'user', url: '/users/1', method: 'GET' },
         { name: 'posts', url: '/posts', method: 'GET' }
       ]);
-      
+
       assert.ok(result.includes("import { http, HttpResponse } from 'msw'"));
-      assert.ok(result.includes("import userFixture from './user.json'"));
-      assert.ok(result.includes("import postsFixture from './posts.json'"));
+      assert.ok(result.includes("require('./user.json')"));
+      assert.ok(result.includes("require('./posts.json')"));
       assert.ok(result.includes('http.get'));
     });
 
@@ -131,7 +133,7 @@ describe('MSW Formatter', () => {
       const result = generateMSWHandlers([
         { name: 'user', url: '/users/1', method: 'GET' }
       ]);
-      
+
       assert.ok(result.includes('export const handlers = ['));
       assert.ok(result.includes('export default handlers'));
     });
@@ -142,7 +144,7 @@ describe('MSW Formatter', () => {
         { name: 'createUser', url: '/users', method: 'POST' },
         { name: 'deleteUser', url: '/users/1', method: 'DELETE' }
       ]);
-      
+
       assert.ok(result.includes('http.get'));
       assert.ok(result.includes('http.post'));
       assert.ok(result.includes('http.delete'));
@@ -150,7 +152,7 @@ describe('MSW Formatter', () => {
 
     it('should handle empty fixtures array', () => {
       const result = generateMSWHandlers([]);
-      
+
       assert.ok(result.includes('export const handlers = ['));
       assert.ok(result.includes('export default handlers'));
     });

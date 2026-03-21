@@ -6,7 +6,7 @@ fixtures/
 *.log
 
 # Config (user-specific)
-mock-api-fixtures.config.json
+apitape.config.json
 
 # IDE
 .idea/
