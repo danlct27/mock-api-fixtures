@@ -1,0 +1,10 @@
+node_modules/
+tests/
+.DS_Store
+*.test.js
+coverage/
+.eslintrc.*
+eslint.config.js
+*.spec.md
+*.log
+.env

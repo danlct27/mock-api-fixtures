@@ -25,3 +25,10 @@ coverage/
 *.tmp
 .env
 .env.local
+
+# IDE
+*.swp
+*.swo
+
+# Package files
+*.tgz

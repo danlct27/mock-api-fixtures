@@ -1,0 +1,20 @@
+{
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": ["jsdoc"],
+  "extends": ["eslint:recommended", "plugin:jsdoc/recommended"],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "jsdoc/require-jsdoc": ["warn", {
+      "contexts": ["FunctionDeclaration", "ClassDeclaration", "MethodDefinition"]
+    }],
+    "jsdoc/check-tag-names": "off",
+    "jsdoc/check-types": "off"
+  }
+}
